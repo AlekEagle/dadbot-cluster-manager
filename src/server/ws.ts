@@ -242,7 +242,12 @@ __wsServer.on('connection', socket => {
       socket.close(WSServerCloseCode.InvalidOpcode);
       return;
     }
-    let usr = authenticate((payload.d as ClientStructures.Identity).token);
+    let usr: string;
+    try {
+      usr = authenticate((payload.d as ClientStructures.Identity).token);
+    } catch (e) {
+      socket.close(WSServerCloseCode.AuthenticationFailed);
+    }
     if (!usr) {
       socket.close(WSServerCloseCode.AuthenticationFailed);
       return;
