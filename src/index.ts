@@ -7,7 +7,7 @@ import Servers from './server';
 import FS from 'node:fs';
 import dotenvConfig from './utils/dotenv';
 import Ajv from 'ajv';
-import { GenericCloseCodes } from './types';
+import { DataTypes, GenericCloseCodes } from './types';
 const ajv = new Ajv();
 dotenvConfig();
 
@@ -16,20 +16,23 @@ const cdata: {
     count: number;
   } = {
     stats: {},
-    count: -1
+    count: -1,
   },
   schema = JSON.parse(FS.readFileSync('./config/schema.json', 'utf-8'));
-let validateSchemaData: any;
+let compiledSchema: any;
 
 global.console = new Logger(
-  process.env.DEBUG ? Level.DEBUG : Level.WARN
+  process.env.DEBUG ? Level.DEBUG : Level.WARN,
 ) as any;
 
 (async function () {
   try {
-    validateSchemaData = ajv.compile(schema);
+    // Compile the JSON schema for validating incoming data
+    compiledSchema = ajv.compile(schema);
+    // Initialize the database connection
     await initDB();
-    Servers.forEach(s => {
+    // Set up event listeners for each server instance
+    Servers.forEach((s) => {
       s.on('authenticated', (id, tC, u) => {
         cdata.count = tC;
         console.log(id, tC, u);
@@ -40,29 +43,38 @@ global.console = new Logger(
       });
       s.on('data', (id, data, callback) => {
         switch (data.type) {
-          case 0:
+          case DataTypes.Stats:
+            // Check if stats for this ID have already been received
             if (!cdata.stats[id]) {
-              if (!validateSchemaData(data.data))
+              // Validate the incoming data against the compiled JSON schema
+              if (!compiledSchema(data.data)) {
+                console.error(`Invalid data received from ID ${id}:`);
                 callback(false, GenericCloseCodes.InvalidData);
-              else {
+              } else {
                 callback(true);
                 cdata.stats[id] = data.data;
                 console.debug(cdata);
+                // Have we received stats from all expected clients?
                 if (
                   new Array(cdata.count)
                     .fill(0)
                     .map((v, i, a) => i)
-                    .every(v => !!cdata.stats[v])
+                    .every((v) => !!cdata.stats[v])
                 ) {
-                  let a = Array.from(Object.entries(cdata.stats));
+                  // If we have stats from all clients, we can process and store the data
+                  let statsEntriesArray = Array.from(
+                    Object.entries(cdata.stats),
+                  );
                   let b: { [key: string]: any } = {};
-                  a.map(a => a[1]).forEach(aa => {
-                    Array.from(Object.entries(aa)).forEach(bb => {
-                      if (b[bb[0] as string] === undefined)
-                        b[bb[0] as string] = [];
-                      b[bb[0] as string].push(bb[1]);
+                  statsEntriesArray
+                    .map((a) => a[1])
+                    .forEach((aa) => {
+                      Array.from(Object.entries(aa)).forEach((bb) => {
+                        if (b[bb[0] as string] === undefined)
+                          b[bb[0] as string] = [];
+                        b[bb[0] as string].push(bb[1]);
+                      });
                     });
-                  });
                   Clusters.create({ id: Date.now(), data: b }).then(() => {
                     console.debug(cdata);
                     console.debug(b);
@@ -83,7 +95,7 @@ global.console = new Logger(
               },
               () => {
                 callback(false, GenericCloseCodes.ServerError);
-              }
+              },
             );
             break;
           case 2:
@@ -93,7 +105,7 @@ global.console = new Logger(
               },
               () => {
                 callback(false, GenericCloseCodes.ServerError);
-              }
+              },
             );
             break;
           default:
@@ -103,13 +115,13 @@ global.console = new Logger(
     });
   } catch (e) {
     console.error(e);
-    Servers.forEach(s => {
+    Servers.forEach((s) => {
       s.serverClosing();
     });
     process.exit(1);
   }
-  process.on('beforeExit', code => {
-    Servers.forEach(s => {
+  process.on('beforeExit', (code) => {
+    Servers.forEach((s) => {
       s.serverClosing();
     });
     process.exit(code);

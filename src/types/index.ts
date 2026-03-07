@@ -6,8 +6,14 @@ export interface Cluster {
   user: string;
 }
 
+export enum DataTypes {
+  Stats,
+  Logs,
+  Errors,
+}
+
 export interface Data {
-  type: 0 | 1 | 2;
+  type: DataTypes;
   data: any;
 }
 
@@ -15,7 +21,7 @@ export enum GenericCloseCodes {
   ServerRestarting,
   InvalidData,
   ServerError,
-  NotReadyForData
+  NotReadyForData,
 }
 
 export interface Events {
@@ -23,7 +29,7 @@ export interface Events {
   data: (
     id: number,
     data: Data,
-    cb: (success: boolean, code?: GenericCloseCodes) => void
+    cb: (success: boolean, code?: GenericCloseCodes) => void,
   ) => void;
   disconnected: (cluster: number, code: number | Error) => void;
 }
@@ -38,7 +44,7 @@ export interface ServerService extends EventEmitter {
     ...args: Parameters<Events[U]>
   ): boolean;
   name: string;
-  getCluster(id: number): Cluster;
+  getCluster(id: number): Cluster | null;
   getAllClusters(): { [key: number]: Cluster };
   disconnectCluster(id: number, code: GenericCloseCodes): void;
   serverClosing(): void;

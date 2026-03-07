@@ -2,8 +2,8 @@ import { sequelize, init as initDB } from '.';
 import { DataTypes, Model } from 'sequelize';
 
 export default class Logs extends Model {
-  id: Date;
-  data: string;
+  declare id: Date;
+  declare data: string;
 }
 
 (async function () {
@@ -11,11 +11,11 @@ export default class Logs extends Model {
   Logs.init(
     {
       id: { type: DataTypes.DATE, primaryKey: true },
-      data: DataTypes.STRING(10485760)
+      data: DataTypes.STRING(10485760),
     },
     {
-      sequelize
-    }
+      sequelize,
+    },
   );
   try {
     await Logs.sync();

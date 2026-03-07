@@ -2,8 +2,8 @@ import { sequelize, init as initDB } from '.';
 import { DataTypes, Model } from 'sequelize';
 
 export default class Clusters extends Model {
-  id: Date;
-  data: { [key: string]: any[] };
+  declare id: Date;
+  declare data: { [key: string]: any[] };
 }
 
 (async function () {
@@ -11,11 +11,11 @@ export default class Clusters extends Model {
   Clusters.init(
     {
       id: { type: DataTypes.DATE, primaryKey: true },
-      data: DataTypes.JSON
+      data: DataTypes.JSON,
     },
     {
-      sequelize
-    }
+      sequelize,
+    },
   );
   try {
     await Clusters.sync();
