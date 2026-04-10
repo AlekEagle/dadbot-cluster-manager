@@ -28,6 +28,5 @@
     "sequelize": "^6.37.7",
     "uuid": "^13.0.0",
     "ws": "^8.10.0"
-  },
-  "packageManager": "yarn@3.2.4"
+  }
 }
